@@ -41,7 +41,8 @@ code/
           Group05_UNSW-NB15_task2_Proposed_Method.ipynb     initial host-node GAT
           Group05_UNSW_NB15_task2_flowsage.ipynb      final proposed model (Flow-SAGE)
           Task2_explained.md                          per-notebook Task-2 writeup
-  task3/  Group05_UNSW-NB15_task3_Explainability.ipynb        SHAP / LIME / GNNExplainer
+  task3/  Group05_UNSW-NB15_task3_Explainability.ipynb        SHAP / LIME on XGBoost, GNNExplainer on host-node GAT
+          Group05_UNSW-NB15_task3_FlowSAGE_Explainability.ipynb  SHAP + LIME on Flow-SAGE (fixed-neighbourhood wrapper)
           Group05_UNSW-NB15_task3_Improvement_Adaption.ipynb  CV, ablation, significance test
           Task3_explained.md                          per-notebook Task-3 writeup
 
@@ -161,7 +162,7 @@ The biggest win is **Reconnaissance** (+0.131) — exactly the attack that manif
 
 Task 3 trains no new production model; it **interprets and stress-tests** the Task-2 models.
 
-- **Explainability.** SHAP (`TreeExplainer`) and LIME on the tabular XGBoost; **GNNExplainer** (Ying et al., NeurIPS 2019) on the graph model, because SHAP/LIME assume flat feature vectors and cannot handle message-passing. We explain one correct and one wrong prediction each. The explainers confirm the `Reconnaissance → Exploits` confusion the EDA and confusion matrices already flagged, and we use the SHAP ranking to check the `sttl` leakage smell carried from Task 1.
+- **Explainability.** SHAP (`TreeExplainer`) and LIME on the tabular XGBoost — the textbook flat-feature case — and **GNNExplainer** (Ying et al., NeurIPS 2019) on the earlier host-node GAT. Because SHAP/LIME assume independent feature vectors and cannot see message-passing, a dedicated notebook ([`FlowSAGE_Explainability.ipynb`](code/task3/Group05_UNSW-NB15_task3_FlowSAGE_Explainability.ipynb)) applies **SHAP + LIME to the proposed Flow-SAGE model itself** via a fixed-neighbourhood black-box wrapper: for a target flow we freeze its real 2-hop neighbourhood and perturb only its own 29 features, so the attributions faithfully rank that flow's own-feature pathway (`x` in the residual `[h, x]` head). These attributions explain the own-feature pathway only — the graph's contribution stays quantified by the **+0.0236** ablation, never by a SHAP value. We explain one correct and one wrong prediction for each model; the XGBoost explainers confirm the `Reconnaissance → Exploits` confusion the EDA and confusion matrices already flagged, and we use the SHAP ranking to re-check the `sttl` leakage smell carried from Task 1.
 - **Robustness — host-grouped cross-validation.** 5-fold `GroupKFold` grouped by host (no host in both train and validation) gives mean macro-F1 **0.514 ± 0.176**. Four folds cluster near the single-split baseline; one fold collapses because a host group holds almost one class only. We report the **mean with its spread** — the large variance is the numeric signature of the 49-host limitation.
 - **Significance test.** A **McNemar** paired test (the required internal model-vs-baseline check) confirms XGBoost significantly outperforms Flow-SAGE (χ² ≈ 3395, p ≈ 0). Honest headline: the tuned tree baseline is the stronger detector on this dataset.
 
@@ -226,7 +227,7 @@ We accept lower scores as the price of an honest evaluation.
 2. Run the notebooks in order:
    - `code/task1/` — EDA.
    - `code/task2/` — `Preprocessing` → `Graph_construction` → `baselines` → `Proposed_Method` (initial host-node GAT) → `flowsage` (final Flow-SAGE model).
-   - `code/task3/` — `Explainability` → `Improvement_Adaption`.
+   - `code/task3/` — `Explainability` → `FlowSAGE_Explainability` → `Improvement_Adaption`.
 3. The graph notebooks require `torch` and `torch_geometric`; the baselines require `xgboost`, `scikit-learn`; explainability requires `shap`, `lime`.
 
 Each notebook is paired with a `*_explained.md` file recording its methodology, results, and interpretation.
